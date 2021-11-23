@@ -15,7 +15,6 @@ namespace ModelLibrary
     class ProcessedImages
     {
         ConcurrentBag<Bitmap> bag = new ConcurrentBag<Bitmap>();
-        //ConcurrentBag<>
         int countOfImages;
 
         public ProcessedImages (int count)
@@ -26,17 +25,7 @@ namespace ModelLibrary
         public string Add (Bitmap bitmap)
         {
             bag.Add(bitmap);
-            //Console.Clear();
-            //Detector.bufferBlock.SendAsync(((double)bag.Count / countOfImages * 100).ToString() + "%");
-            //Console.WriteLine(((double)bag.Count / countOfImages * 100).ToString() + "%");
             return ((double)bag.Count / countOfImages * 100).ToString() + "%";
         }
-
-        /*
-        public string Percent()
-        {
-            return ((double)bag.Count / countOfImages * 100).ToString() + "%";
-        }
-        */
     }
 }
