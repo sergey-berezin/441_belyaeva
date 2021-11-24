@@ -9,10 +9,10 @@ using static Microsoft.ML.Transforms.Image.ImageResizingEstimator;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace ModelLibrary
 {
-    //var bufferBlock = new BufferBlock<int>();
     public class Detector
     {
         // model is available here:
@@ -31,16 +31,9 @@ namespace ModelLibrary
             "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
 
         public static BufferBlock<string> bufferBlock = new BufferBlock<string>();
-
-        /*
-        private static async Task Consumer()
-        {
-            while (true)
-            {
-                Console.WriteLine(await bufferBlock.ReceiveAsync());
-            }
-        }
-        */
+        public static BufferBlock<(string, string)> resultBufferBlock = new BufferBlock<(string, string)>();
+        public static CancellationTokenSource cancelTokenSource;
+        public static CancellationToken token;
 
         public static async Task DetectImage(string imageFolder)
         {
@@ -81,100 +74,48 @@ namespace ModelLibrary
             ConcurrentBag<YoloV4Result> detectedObjects = new ConcurrentBag<YoloV4Result>();
             string[] imageNames = Directory.GetFiles(imageFolder);
             ProcessedImages processedImages = new ProcessedImages(imageNames.Length);
-            //object locker = new object();
+
+            Dictionary<string, ConcurrentBag<string>> recognizedObjects = new Dictionary<string, ConcurrentBag<string>>();
+
+            foreach (string name in classesNames) {
+                recognizedObjects.Add(name, new ConcurrentBag<string>());
+            }
+
+            object locker = new object();
 
             var sw = new Stopwatch();
             sw.Start();
-            /*
+            
             var ab = new ActionBlock<string>(async image => {
                 YoloV4Prediction predict;
                 lock (locker)
                 {
                     var bitmap = new Bitmap(Image.FromFile(Path.Combine(image)));
                     predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
-                    processedImages.Add(image);
                 }
 
                 var results = predict.GetResults(classesNames, 0.3f, 0.7f);
                 foreach (var res in results)
                 {
-                    detectedObjects.Add(res); 
+                    recognizedObjects[res.Label].Add(image);
+                    if (!token.IsCancellationRequested)
+                    {
+                        await resultBufferBlock.SendAsync((res.Label, image));
+                    }
                 }
             },
             new ExecutionDataflowBlockOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = token
             });
 
             Parallel.For(0, imageNames.Length, i => ab.Post(imageNames[i]));
             ab.Complete();
             await ab.Completion;
-            */
-
-            // 3 action blocks
-            var bitmapBlock = new TransformBlock<string, Bitmap>(async image =>
-            {
-                var bitmap = new Bitmap(Image.FromFile(Path.Combine(image)));
-                return bitmap;
-            },
-            new ExecutionDataflowBlockOptions
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            });
-
-            var predictBlock = new TransformBlock<Bitmap, YoloV4Prediction>(async bitmap =>
-            {
-                YoloV4Prediction predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
-                await bufferBlock.SendAsync(processedImages.Add(bitmap));
-                return predict;
-            },
-            new ExecutionDataflowBlockOptions
-            {
-                MaxDegreeOfParallelism = 1,
-            });
-
-            var resultBlock = new ActionBlock<YoloV4Prediction>(async predict =>
-            {
-                var results = predict.GetResults(classesNames, 0.3f, 0.7f);
-                foreach (var res in results)
-                {
-                    detectedObjects.Add(res);
-                    var x1 = res.BBox[0];
-                    var y1 = res.BBox[1];
-                    var x2 = res.BBox[2];
-                    var y2 = res.BBox[3];
-                    await bufferBlock.SendAsync($"[left,top,right,bottom]:[{x1}, {y1}, {x2}, {y2}] object {res.Label}");
-                    //await bufferBlock.SendAsync(detectedObjects.Percent());
-                    //Console.WriteLine($"[left,top,right,bottom]:[{x1}, {y1}, {x2}, {y2}] object {res.Label}");
-                }
-            },
-            new ExecutionDataflowBlockOptions
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            });
-
-            var link = new DataflowLinkOptions { PropagateCompletion = true };
-            bitmapBlock.LinkTo(predictBlock, link);
-            predictBlock.LinkTo(resultBlock, link);
-
-            Parallel.For(0, imageNames.Length, i => bitmapBlock.Post(imageNames[i]));
-            bitmapBlock.Complete();
-            await resultBlock.Completion;
             sw.Stop();
 
-            //Console.WriteLine($"Done in {sw.ElapsedMilliseconds}ms.");
-            /*
-            Console.WriteLine("List of finding objects: ");
-            foreach (var obj in detectedObjects)
-            {
-                var x1 = obj.BBox[0];
-                var y1 = obj.BBox[1];
-                var x2 = obj.BBox[2];
-                var y2 = obj.BBox[3];
-                Console.WriteLine($"[left,top,right,bottom]:[{x1}, {y1}, {x2}, {y2}] object {obj.Label}");
-            }
-            Console.WriteLine($"Total number of objects: {detectedObjects.Count}");
-            */
+            await resultBufferBlock.SendAsync(("end", "end"));
             await Detector.bufferBlock.SendAsync($"Total number of objects: {detectedObjects.Count}");
             await Detector.bufferBlock.SendAsync("end");
         }

@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp", "ConsoleApp\Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModelLibrary", "ModelLibrary\ModelLibrary.csproj", "{E79EB15E-B473-4DF0-91E2-2B63353D248B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WpfApp", "WpfApp\WpfApp.csproj", "{AEEA99DE-8053-4B45-A8B7-97BE5E20F4FA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{E79EB15E-B473-4DF0-91E2-2B63353D248B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E79EB15E-B473-4DF0-91E2-2B63353D248B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E79EB15E-B473-4DF0-91E2-2B63353D248B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEEA99DE-8053-4B45-A8B7-97BE5E20F4FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEEA99DE-8053-4B45-A8B7-97BE5E20F4FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEEA99DE-8053-4B45-A8B7-97BE5E20F4FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEEA99DE-8053-4B45-A8B7-97BE5E20F4FA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
